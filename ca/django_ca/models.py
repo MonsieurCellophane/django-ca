@@ -155,9 +155,32 @@ class X509CertMixin(models.Model):
                 yield name, getattr(self, name)()
             elif name == 'cRLDistributionPoints':
                 yield name, self.crlDistributionPoints()
+            elif name == "certificatePolicies":
+                yield name, self.certificatePolicies()
+                
+            elif name == "Unknown OID":
+                #import ipdb; ipdb.set_trace()
+                try:
+                    dct=self.__dict__["_unknown_ids"]
+                    try:
+                        dct[ext.oid.dotted_string].extend(list(ext.value))
+                    except KeyError:
+                        dct[ext.oid.dotted_string]=list(ext.value)
+                except KeyError:
+                    self.__dict__["_unknown_ids"]={ext.oid.dotted_string:list(ext.value)}
+                yield 'UnknownOID',str(ext.value)
             else:  # pragma: no cover  - we have a function for everything we support
                 yield name, str(ext.value)
 
+    @property
+    def UnknownOID(self,*args,**kwargs):
+        import pprint
+        try:
+            return pprint.pformat(self._unknown_ids)
+        except AttributeError:
+            return "<Unknown OID>"
+        
+        
     def distinguishedName(self):
         return format_name(self.x509.subject)
     distinguishedName.short_description = 'Distinguished Name'
@@ -184,6 +207,17 @@ class X509CertMixin(models.Model):
                 value.append('Relative Name: %s' % format_name(dp.relative_name.value))
 
         return ext.critical, value
+    #ALF
+    def certificatePolicies(self):
+        #import pdb; pdb.set_trace()
+        try:
+            ext=self.x509.extensions.get_extension_for_oid(ExtensionOID.CERTIFICATE_POLICIES)
+            value = []
+            for dp in ext.value:
+                value.append(str(ext.value))
+        except x509.ExtensionNotFound:
+            return None
+        return value
 
     def authorityInfoAccess(self):
         try:
