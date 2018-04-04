@@ -189,7 +189,7 @@ class X509CertMixin(models.Model):
         try:
             ext = self.x509.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
         except x509.ExtensionNotFound:
-            return None
+            return (False,'')
 
         return ext.critical, [format_general_name(name) for name in ext.value]
 
